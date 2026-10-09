@@ -1,74 +1,62 @@
-import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
 
 # إعداد السجلات لمتابعة عمل البوت
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
 # توكن البوت الخاص بك
 TOKEN = "8714224392:AAGPh3n20TappdVNilKqvSV_WsEietYa57c"
 
-# دالة رسالة البدء /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_name = update.effective_user.first_name
+def start(update: Update, context: CallbackContext) -> None:
+    """إرسال رسالة الترحيب عند بدء استخدام البوت."""
+    user = update.effective_user
     welcome_text = (
-        f"أهلاً بك يا {user_name} في بوت الاختبارات التجريبية (كلية الشريعة والقانون)!\n\n"
-        "اختر القسم أو المادة التي تريد اختبار نفسك فيها:"
+        f"مرحباً بك يا {user.first_name} في بوت الاختبارات والمسابقات الذكي! 📚\n\n"
+        "اختر أحد الخيارات في الأسفل للبدء:"
     )
     
     keyboard = [
-        [InlineKeyboardButton("📚 اختبار مادة الفقه", callback_data="quiz_fiqh")],
-        [InlineKeyboardButton("⚖️ اختبار مادة القانون", callback_data="quiz_law")],
-        [InlineKeyboardButton("ℹ️ معلومات عن البوت", callback_data="info")]
+        [InlineKeyboardButton("📝 بدء الاختبار", callback_data='start_quiz')],
+        [InlineKeyboardButton("ℹ️ حول البوت", callback_data='about')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+    update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
-# دالة التعامل مع الأزرار والأسئلة
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def button_handler(update: Update, context: CallbackContext) -> None:
+    """التعامل مع الضغط على الأزرار."""
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
-    if query.data == "quiz_fiqh":
-        await query.edit_message_text(
-            text="سؤال (1): ما حكم الصلاة خلف المبتدع؟\n\nأ) جائزة مع الكراهة\nب) باطلة\nج) غير صحيحة",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("أ) جائزة مع الكراهة", callback_data="correct")],
-                [InlineKeyboardButton("ب) باطلة", callback_data="wrong")],
-                [InlineKeyboardButton("ج) غير صحيحة", callback_data="wrong")]
-            ])
-        )
-    elif query.data == "quiz_law":
-        await query.edit_message_text(
-            text="سؤال (1): ما هو الأساس في العقوبات التعزيرية؟\n\nأ) التوقيف الشرعي\nب) اجتهاد ولي الأمر والقاضي\nج) النص القطعي",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("أ) التوقيف الشرعي", callback_data="wrong")],
-                [InlineKeyboardButton("ب) اجتهاد ولي الأمر والقاضي", callback_data="correct")],
-                [InlineKeyboardButton("ج) النص القطعي", callback_data="wrong")]
-            ])
-        )
-    elif query.data == "correct":
-        await query.edit_message_text(text="✅ إجابتك صحيحة أحسنت! /start للعودة للقائمة الرئيسية.")
-    elif query.data == "wrong":
-        await query.edit_message_text(text="❌ إجابة خاطئة. حاول مرة أخرى عبر إرسال /start.")
-    elif query.data == "info":
-        await query.edit_message_text(text="هذا بوت تجريبي لخدمة طلاب كلية الشريعة والقانون. /start للعودة.")
+    if query.data == 'start_quiz':
+        query.edit_message_text(text="جاري تجهيز الأسئلة... قريباً تبدأ المسابقة! 🚀")
+    elif query.data == 'about':
+        query.edit_message_text(text="هذا البوت مخصص لتقديم اختبارات وتدريبات مساعدة للطلاب. الإصدار التجريبي.")
 
-def main():
-    # بناء وتشغيل تطبيق البوت
-    application = ApplicationBuilder().token(TOKEN).build()
+def main() -> None:
+    """تشغيل البوت."""
+    updater = Updater(TOKEN)
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
+    # جلب مدير التوزيع لإضافة الأوامر
+    dispatcher = updater.dispatcher
 
-    print("البوت يعمل الان...")
-    application.run_polling()
+    # أوامر البوت
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CallbackQueryHandler(button_handler))
+
+    # بدء تشغيل البوت
+    updater.start_polling()
+    print("تم تشغيل البوت بنجاح...")
+    
+    # البقاء في وضع الاستماع حتى يتم إيقافه يدويياً
+    updater.idle()
 
 if __name__ == '__main__':
     main()
+
 
